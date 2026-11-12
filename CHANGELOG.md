@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.1 — 2026-11-12
+
+- 新增 `locale/en.json`、`locale/zh.json`：插件市场/管理页显示「日期工作区」而不是裸包名。
+- 新增 `assets/icon.svg`，经 `package.json` 的 `icon` 字段暴露为卡图。
+- 设置页在 settings 文档未就绪时显示「正在读取配置…」，不再空白。
+
 ## 0.2.0 — 2026-11-12
 
 装成可管理的 **bundle**，基目录可在 GUI 里改。

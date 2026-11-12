@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "Date workspace",
+    "description": "Adds a dated-workspace choice when creating a workspace: create or open YYYY-MM-DD under a configurable base directory."
+  },
+  "tab": "Date workspace"
+}

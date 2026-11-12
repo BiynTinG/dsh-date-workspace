@@ -65,13 +65,15 @@ profile 的这一层是热重载的，插件行立即激活；**刷新一次页�
 
 ## 在 GUI 里改基目录（推荐）
 
-装成 bundle 后，插件会出现在侧边栏 **Plugins → Installed plugins** 里，卡片本身就是配置页：
+装成 bundle 后，插件会出现在侧边栏 **Plugins → 已安装** 里（列表显示「日期工作区」）。**点整张卡进详情页**，
+描述下面就是配置区（不是列表卡片上的开关）：
 
 ![设置页预览](assets/preview-settings.svg)
 
-1. 侧边栏点 **Plugins**，在 **Installed plugins** 找到 **dsh-date-workspace / 日期工作区**；
-2. 点进卡片，**基目录** 一栏填新路径，点 **保存**；
-3. 保存会写进 profile 的 `cordis.patch.yml`（`- id: date-workspace` 的 `config.baseDir`），
+1. 侧边栏点 **插件 / Plugins**，切到 **已安装 / Installed** 标签；
+2. 列表里找到 **日期工作区（`dsh-date-workspace`）**，**点整张卡进详情页**；
+3. 详情页描述下面的 **基目录** 一栏填新路径，点 **保存**；
+4. 保存会写进 profile 的 `cordis.patch.yml`（`- id: date-workspace` 的 `config.baseDir`），
    同时清掉本浏览器在对话框里记住的旧值，**无需重启**，下次打开对话框就是新目录。
 
 **恢复默认** 会删掉这条 override，回落到插件自带的 `D:\工作空间\dsh-work`。
@@ -79,6 +81,9 @@ profile 的这一层是热重载的，插件行立即激活；**刷新一次页�
 > 为什么以前在 Plugins 里查不到：之前是手工往 profile patch 里插的一行裸插件（只存在于 Loader 树里，
 > 不在 `dsh.profile.bundles` 里），插件管理页只认 bundle。现在包自带 `cordis.patch.yml` 并登记进
 > `dsh.profile.bundles`，所以它是可管理的 bundle，并且能带自己的配置页（`plugins.bundle.config` 槽位）。
+>
+> 列表里的中文名和图标来自 `locale/*.json` 与 `assets/icon.svg`，Host **只在启动时读**，所以第一次装完
+> 需要重启一次 DSH 才会显示「日期工作区」。
 
 ## 配置
 
