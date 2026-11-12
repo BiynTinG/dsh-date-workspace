@@ -1,0 +1,53 @@
+{
+  "name": "dsh-date-workspace",
+  "version": "0.1.0",
+  "description": "在“新建工作区”时多一个选择：按日期在 D:\\工作空间\\dsh-work 下创建并打开工作区（YYYY-MM-DD）。",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "manifestVersion": 1,
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-workspace"
+      ],
+      "platform": "web"
+    }
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "~4.1.0"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node tests/smoke.mjs"
+  },
+  "keywords": [
+    "dsh-plugin",
+    "deepseek-harness",
+    "dsh",
+    "workspace",
+    "date",
+    "plugin"
+  ],
+  "files": [
+    "lib/index.js",
+    "lib/client.js",
+    "cordis.patch.yml",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    "assets/preview.svg",
+    "package.json"
+  ],
+  "author": "liujun <2879845107@qq.com>",
+  "license": "MIT"
+}
