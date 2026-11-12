@@ -44,6 +44,9 @@ const reactStub = {
 		return { current: initial };
 	},
 	useEffect() {},
+	useSyncExternalStore(_subscribe, getSnapshot) {
+		return getSnapshot();
+	},
 	createElement(type, props, ...children) {
 		return { type, props, children };
 	}
@@ -80,21 +83,50 @@ const directory = {
 };
 
 const registrations = [];
+const settingsRegistrations = [];
+const formStub = {
+	getSnapshot: () => ({
+		status: "ready",
+		value: { baseDir: "E:\\注入的工作区" },
+		writable: true
+	}),
+	subscribe: () => () => {},
+	set: async () => true,
+	unset: async () => true
+};
+const slotTable = (bucket) => ({
+	inject(_hole, listener) {
+		const produced = listener();
+		if (produced !== void 0 && typeof produced.next === "function") {
+			let step = produced.next();
+			while (step.done !== true) step = produced.next();
+		}
+		return () => {};
+	},
+	register(options, component) {
+		bucket.push({ options, component });
+		return () => {};
+	}
+});
+const settingsCtx = {
+	configForms: {
+		get(entryId) {
+			if (entryId !== "date-workspace") throw new Error(`unexpected settings namespace ${entryId}`);
+			return formStub;
+		}
+	},
+	effect(factory) {
+		factory();
+		return () => {};
+	},
+	slots: slotTable(settingsRegistrations)
+};
 const ctx = {
 	uiWorkspace: directory,
-	slots: {
-		inject(_hole, listener) {
-			const produced = listener();
-			if (produced !== void 0 && typeof produced.next === "function") {
-				let step = produced.next();
-				while (step.done !== true) step = produced.next();
-			}
-			return () => {};
-		},
-		register(options, component) {
-			registrations.push({ options, component });
-			return () => {};
-		}
+	slots: slotTable(registrations),
+	inject(names, callback) {
+		if (!names.includes("configForms")) throw new Error(`unexpected inject ${names}`);
+		callback(settingsCtx);
 	}
 };
 moduleExports.apply(ctx);
@@ -104,6 +136,17 @@ for (const { options } of registrations) {
 	if (typeof options.inject !== "function") throw new Error("expected an injected face factory");
 }
 const injected = registrations[0].options.inject();
+
+// The settings domain is composed: one bundle-config page for this package, and
+// the mirror already republished the base directory as the dialog's global.
+if (settingsRegistrations.length !== 1) throw new Error(`expected 1 settings page, got ${settingsRegistrations.length}`);
+const settingsEntry = settingsRegistrations[0].options;
+if (settingsEntry.name !== "plugins.bundle.config" || settingsEntry.key !== "dsh-date-workspace") {
+	throw new Error(`unexpected settings slot ${settingsEntry.name}#${settingsEntry.key}`);
+}
+if (globalThis.__DSH_DATE_WORKSPACE__?.baseDir !== "E:\\注入的工作区") {
+	throw new Error("settings mirror did not publish the base directory");
+}
 
 await injected.ensure("D:\\工作空间\\dsh-work\\2026-11-12");
 console.log("created segments:", calls.join(" | "));
@@ -197,5 +240,10 @@ if (remembered.props.value !== "F:\\临时覆盖") throw new Error("remembered b
 buttonByTitle(component(props), CONFIGURED).props.onClick();
 if (globalThis.localStorage.value !== void 0) throw new Error("reset did not clear the remembered base");
 if (baseInput(component(props)).props.value !== CONFIGURED) throw new Error("reset did not restore the configured base");
+
+// The configuration page renders the effective value from the settings form.
+const settingsComponent = settingsRegistrations[0].component;
+const settingsTree = settingsComponent({ form: formStub, view: "page" });
+if (baseInput(settingsTree).props.value !== "E:\\注入的工作区") throw new Error("settings page did not render the effective base");
 
 console.log("smoke ok", fileURLToPath(new URL("../lib/client.js", import.meta.url)));

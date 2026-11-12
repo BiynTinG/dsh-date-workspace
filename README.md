@@ -63,6 +63,23 @@ profile 的这一层是热重载的，插件行立即激活；**刷新一次页�
 
 日期目录已存在时行为等价于打开该工作区；工作区标题默认取目录名（即日期）。
 
+## 在 GUI 里改基目录（推荐）
+
+装成 bundle 后，插件会出现在侧边栏 **Plugins → Installed plugins** 里，卡片本身就是配置页：
+
+![设置页预览](assets/preview-settings.svg)
+
+1. 侧边栏点 **Plugins**，在 **Installed plugins** 找到 **dsh-date-workspace / 日期工作区**；
+2. 点进卡片，**基目录** 一栏填新路径，点 **保存**；
+3. 保存会写进 profile 的 `cordis.patch.yml`（`- id: date-workspace` 的 `config.baseDir`），
+   同时清掉本浏览器在对话框里记住的旧值，**无需重启**，下次打开对话框就是新目录。
+
+**恢复默认** 会删掉这条 override，回落到插件自带的 `D:\工作空间\dsh-work`。
+
+> 为什么以前在 Plugins 里查不到：之前是手工往 profile patch 里插的一行裸插件（只存在于 Loader 树里，
+> 不在 `dsh.profile.bundles` 里），插件管理页只认 bundle。现在包自带 `cordis.patch.yml` 并登记进
+> `dsh.profile.bundles`，所以它是可管理的 bundle，并且能带自己的配置页（`plugins.bundle.config` 槽位）。
+
 ## 配置
 
 基目录是**插件行配置**，不是写死的常量。三层来源，优先级从高到低：
@@ -70,8 +87,8 @@ profile 的这一层是热重载的，插件行立即激活；**刷新一次页�
 | 层 | 怎么设 | 生效范围 |
 | --- | --- | --- |
 | 对话框记忆值 | 在对话框里改「基目录」，存进 `localStorage['dsh-date-workspace:base']` | 当前浏览器/设备 |
-| 插件行 config | Loader 行的 `config.baseDir`，Host 启动时注入 `globalThis.__DSH_DATE_WORKSPACE__` | 所有页面 |
-| 内置默认 | `lib/index.js` 的 `DEFAULT_BASE` = `D:\工作空间\dsh-work` | — |
+| 插件行 config | GUI 设置页保存，或手改 profile patch 的 `config.baseDir`；Host 启动时注入 `globalThis.__DSH_DATE_WORKSPACE__`，并随 volatile 引用热更新 | 所有页面 |
+| 内置默认 | `lib/index.js` 的 `Config.baseDir` 默认值 = `D:\工作空间\dsh-work` | — |
 
 装好后在 profile 的 `cordis.patch.yml`（或 bundle 层的同一行）按 id 补 `config`：
 
@@ -81,17 +98,23 @@ profile 的这一层是热重载的，插件行立即激活；**刷新一次页�
     baseDir: E:\工作空间\dsh-work
 ```
 
-- 行配置只在 **Host 启动**时读一次，改完重启 DSH；之后网页侧只要刷新。
+- `baseDir` 是 **volatile** Config 字段：GUI 保存或手改 patch 都会即时应用到运行中的 Host（profile 开着 HMR 时），
+  不需要重启；改 `lib/index.js` / `lib/client.js` 的代码才需要重启 / 刷新。
 - 对话框里的「默认」按钮会清掉浏览器记忆值，立刻回落到行配置。
 - 目录名格式由 `lib/client.js` 的 `todayISO()` / `addDays()` 决定，目前是 `YYYY-MM-DD`。
 
 ## 实现
 
-- `lib/index.js`：Host 半边读行配置 `baseDir`，在 `webserver/index-inject` 里推一行
-  `{ kind: "global", name: "__DSH_DATE_WORKSPACE__", value: { baseDir } }`，页面启动时就是
-  `globalThis.__DSH_DATE_WORKSPACE__`。
+- `lib/index.js`：`Config = z.object({ baseDir: z.string().default(...).volatile() })`；Host 半边在
+  `webserver/index-inject` 里推一行 `{ kind: "global", name: "__DSH_DATE_WORKSPACE__", value: { baseDir } }`，
+  每次渲染 index 都从 volatile 引用读当前值 → 页面里就是 `globalThis.__DSH_DATE_WORKSPACE__`。
 - `lib/client.js`：手写的 Module Loader bundle（`window.__ModuleLoader__.load({ id, factory })`），
   依赖仅 `react` / `react-dom`（静态模块表内），无需编译即可被 `/plugins/dsh-date-workspace/client.js` 提供。
+  它注册三样东西：
+  1. 两个 workspace directory-flow 洞的日期对话框（`priority: -1` 影子注册）；
+  2. `plugins.bundle.config`（key `dsh-date-workspace`）的设置页，读写走 `ctx.configForms.get('date-workspace')`
+     （即 Host settings 命名空间，写入落在 profile patch）；
+  3. 一个 mirror 订阅，把设置页的最新值同步进 `globalThis.__DSH_DATE_WORKSPACE__`，对话框立刻用新目录。
 - 建目录复用 `ctx.uiWorkspace.createDirectory(parent, name)`（Host 侧 `mkdir`，`EEXIST` → `directory-exists`）；
   选目录复用 `ctx.uiWorkspace.pickDirectory()`。
 - 对话框拿 owner 传来的 `open / busy / onPicked / onCancel`，自己只负责算路径、建目录、回报一个路径。
@@ -103,16 +126,17 @@ npm test        # node tests/smoke.mjs && node tests/host.mjs
 ```
 
 - `tests/smoke.mjs`：桩 `react`/`react-dom` 与桩槽位注册器跑整个 client factory，覆盖 bundle 注册 id、
-  `inject` 服务表、两个洞的 priority -1 注册、分段建目录顺序、`directory-exists` 容忍、真实错误透传、
-  基目录三层优先级与「默认」按钮、组件开/关渲染。
-- `tests/host.mjs`：桩 ctx 跑 Host 半边，覆盖行配置发布、空白/缺失回落、返回值 trim。
+  `inject` 服务表、两个洞的 priority -1 注册、设置页注册与 mirror 同步、分段建目录顺序、`directory-exists`
+  容忍、真实错误透传、基目录三层优先级与「默认」按钮、两个组件渲染。
+- `tests/host.mjs`：桩 ctx 跑 Host 半边，覆盖 `Config` 默认值、行配置发布、空白/缺失回落、trim、
+  以及 volatile 引用的实时读取。
 
 改了 `lib/client.js` 后：client-modules 按 mtime 计算 revision，刷新页面即加载新版本。改了
-`lib/index.js` 或行配置后：重启 DSH。
+`lib/index.js`：重启 DSH。
 
 ## 卸载
 
-1. 删掉 `cordis.patch.yml` / profile patch 里的插件行（或从 `dsh.profile.bundles` 移除本包）。
+1. 侧边栏 **Plugins → 日期工作区 → Remove**（或把本包从 profile 的 `dsh.profile.bundles` 去掉）。
 2. 删除 junction（手动装法）。
 3. 刷新页面——原生选择器回来。
 

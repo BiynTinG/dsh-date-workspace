@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="560" height="260" viewBox="0 0 560 260" role="img" aria-label="dsh-date-workspace 设置页预览">
+  <defs>
+    <filter id="shadow2" x="-20%" y="-20%" width="140%" height="160%">
+      <feDropShadow dx="0" dy="12" stdDeviation="18" flood-color="#000000" flood-opacity="0.42"/>
+    </filter>
+    <style>
+      .t { font-family: system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif; }
+      .mono { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; }
+      .title { fill: #e9eaee; font-size: 15px; font-weight: 600; }
+      .sub { fill: #8b919c; font-size: 12px; }
+      .label { fill: #a4aab5; font-size: 12px; }
+      .value { fill: #dfe1e6; font-size: 12px; }
+      .hint { fill: #7c828d; font-size: 11px; }
+    </style>
+  </defs>
+
+  <g filter="url(#shadow2)">
+    <rect x="40" y="24" width="480" height="200" rx="14" fill="#1b1c21" stroke="#3a3d47" stroke-width="1"/>
+  </g>
+
+  <!-- card head -->
+  <text class="t title" x="64" y="60">日期工作区</text>
+  <text class="t hint" x="140" y="60">0.2.0 · Installed</text>
+  <text class="t sub" x="64" y="82">在新建工作区时提供一个按日期创建的选择。</text>
+
+  <!-- config form -->
+  <text class="t label" x="64" y="119">基目录</text>
+  <rect x="116" y="100" width="248" height="30" rx="8" fill="#24262d" stroke="#3a3d47"/>
+  <text class="mono" x="128" y="119" fill="#cfd2d9" font-size="12">D:\工作空间\dsh-work</text>
+  <rect x="372" y="100" width="52" height="30" rx="9" fill="#4d6bfe"/>
+  <text class="t" x="388" y="120" fill="#ffffff" font-size="12" font-weight="500">保存</text>
+  <rect x="432" y="100" width="64" height="30" rx="9" fill="none" stroke="#3a3d47"/>
+  <text class="t value" x="444" y="120">恢复默认</text>
+
+  <text class="t hint" x="64" y="150">当前生效: D:\工作空间\dsh-work</text>
+  <text class="t hint" x="64" y="170">插件行配置（config.baseDir），保存会写进 profile 的 cordis.patch.yml。</text>
+  <text class="t hint" x="64" y="190">并清掉本浏览器在对话框里记住的值，下次打开对话框即生效。</text>
+</svg>
+

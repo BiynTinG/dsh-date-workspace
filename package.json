@@ -1,6 +1,6 @@
 {
   "name": "dsh-date-workspace",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "在“新建工作区”时多一个选择：按日期在 D:\\工作空间\\dsh-work 下创建并打开工作区（YYYY-MM-DD）。",
   "type": "module",
   "main": "lib/index.js",
@@ -22,7 +22,8 @@
     }
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "~4.1.0"
+    "@deepseek-ai/cordis": "~4.1.0",
+    "@deepseek-ai/schemastery": "~3.19.0"
   },
   "engines": {
     "node": ">=20"
@@ -46,8 +47,11 @@
     "CHANGELOG.md",
     "LICENSE",
     "assets/preview.svg",
+    "assets/preview-settings.svg",
+    "tests",
     "package.json"
   ],
   "author": "liujun <2879845107@qq.com>",
   "license": "MIT"
 }
+
