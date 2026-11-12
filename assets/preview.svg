@@ -36,8 +36,10 @@
 
   <!-- base directory row -->
   <text class="t label" x="64" y="155">基目录</text>
-  <rect x="104" y="136" width="392" height="30" rx="8" fill="#24262d" stroke="#3a3d47"/>
+  <rect x="104" y="136" width="344" height="30" rx="8" fill="#24262d" stroke="#3a3d47"/>
   <text class="mono" x="116" y="155" fill="#cfd2d9" font-size="12">D:\工作空间\dsh-work</text>
+  <rect x="456" y="136" width="40" height="30" rx="9" fill="none" stroke="#3a3d47"/>
+  <text class="t value" x="469" y="155">默认</text>
 
   <!-- preview -->
   <rect x="64" y="176" width="432" height="32" rx="9" fill="#23252b"/>

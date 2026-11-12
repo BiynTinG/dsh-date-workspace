@@ -28,7 +28,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "test": "node tests/smoke.mjs"
+    "test": "node tests/smoke.mjs && node tests/host.mjs"
   },
   "keywords": [
     "dsh-plugin",

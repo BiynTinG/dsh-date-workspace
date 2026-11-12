@@ -44,13 +44,16 @@ New-Item -ItemType Junction `
   -Path  "$env:DSH_HOME\profiles\<profile>\node_modules\dsh-date-workspace" `
   -Target "<本仓库路径>"
 
-# 2) 在 profile 的 cordis.patch.yml 顶部插入插件行
+# 2) 在 profile 的 cordis.patch.yml 顶部插入插件行（config 可选）
 #    - insert:
 #        - id: date-workspace
 #          name: dsh-date-workspace
+#          config:
+#            baseDir: D:\工作空间\dsh-work
 ```
 
 profile 的这一层是热重载的，插件行立即激活；**刷新一次页面（Ctrl+R）** 就能看到新对话框。
+行里带了 `config` 的话，Host 半边需要**重启一次 DSH** 才会把 `baseDir` 注入页面。
 
 ## 使用
 
@@ -62,14 +65,31 @@ profile 的这一层是热重载的，插件行立即激活；**刷新一次页�
 
 ## 配置
 
-| 项 | 位置 | 默认 |
+基目录是**插件行配置**，不是写死的常量。三层来源，优先级从高到低：
+
+| 层 | 怎么设 | 生效范围 |
 | --- | --- | --- |
-| 基目录 | 对话框内「基目录」，持久化到 `localStorage['dsh-date-workspace:base']` | `D:\工作空间\dsh-work` |
-| 目录名格式 | `lib/client.js` 的 `todayISO()` / `addDays()` | `YYYY-MM-DD` |
+| 对话框记忆值 | 在对话框里改「基目录」，存进 `localStorage['dsh-date-workspace:base']` | 当前浏览器/设备 |
+| 插件行 config | Loader 行的 `config.baseDir`，Host 启动时注入 `globalThis.__DSH_DATE_WORKSPACE__` | 所有页面 |
+| 内置默认 | `lib/index.js` 的 `DEFAULT_BASE` = `D:\工作空间\dsh-work` | — |
+
+装好后在 profile 的 `cordis.patch.yml`（或 bundle 层的同一行）按 id 补 `config`：
+
+```yaml
+- id: date-workspace
+  config:
+    baseDir: E:\工作空间\dsh-work
+```
+
+- 行配置只在 **Host 启动**时读一次，改完重启 DSH；之后网页侧只要刷新。
+- 对话框里的「默认」按钮会清掉浏览器记忆值，立刻回落到行配置。
+- 目录名格式由 `lib/client.js` 的 `todayISO()` / `addDays()` 决定，目前是 `YYYY-MM-DD`。
 
 ## 实现
 
-- `lib/index.js`：Host 半边空 `apply`，只为让 Loader 有行可激活、让 client-modules 扫到 `dsh.client`。
+- `lib/index.js`：Host 半边读行配置 `baseDir`，在 `webserver/index-inject` 里推一行
+  `{ kind: "global", name: "__DSH_DATE_WORKSPACE__", value: { baseDir } }`，页面启动时就是
+  `globalThis.__DSH_DATE_WORKSPACE__`。
 - `lib/client.js`：手写的 Module Loader bundle（`window.__ModuleLoader__.load({ id, factory })`），
   依赖仅 `react` / `react-dom`（静态模块表内），无需编译即可被 `/plugins/dsh-date-workspace/client.js` 提供。
 - 建目录复用 `ctx.uiWorkspace.createDirectory(parent, name)`（Host 侧 `mkdir`，`EEXIST` → `directory-exists`）；
@@ -79,14 +99,16 @@ profile 的这一层是热重载的，插件行立即激活；**刷新一次页�
 ## 开发
 
 ```bash
-npm test        # node tests/smoke.mjs
+npm test        # node tests/smoke.mjs && node tests/host.mjs
 ```
 
-`tests/smoke.mjs` 用桩 `react`/`react-dom` 和桩槽位注册器跑整个 factory，覆盖：bundle 注册 id、
-`inject` 服务表、两个洞的 priority -1 注册、分段建目录顺序、`directory-exists` 容忍、真实错误透传、
-组件开/关渲染。
+- `tests/smoke.mjs`：桩 `react`/`react-dom` 与桩槽位注册器跑整个 client factory，覆盖 bundle 注册 id、
+  `inject` 服务表、两个洞的 priority -1 注册、分段建目录顺序、`directory-exists` 容忍、真实错误透传、
+  基目录三层优先级与「默认」按钮、组件开/关渲染。
+- `tests/host.mjs`：桩 ctx 跑 Host 半边，覆盖行配置发布、空白/缺失回落、返回值 trim。
 
-改了 `lib/client.js` 后：client-modules 按 mtime 计算 revision，刷新页面即加载新版本。
+改了 `lib/client.js` 后：client-modules 按 mtime 计算 revision，刷新页面即加载新版本。改了
+`lib/index.js` 或行配置后：重启 DSH。
 
 ## 卸载
 

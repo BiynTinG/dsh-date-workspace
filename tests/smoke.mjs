@@ -27,6 +27,9 @@ globalThis.localStorage = {
 	},
 	setItem(_key, value) {
 		this.value = value;
+	},
+	removeItem() {
+		this.value = void 0;
 	}
 };
 globalThis.document = {
@@ -134,8 +137,7 @@ if (surfaced?.rpcError?.code !== "directory-create-failed") throw new Error("une
 
 // The dialog component renders an element while open and nothing while closed.
 const component = registrations[0].component;
-if (component({ open: false }) !== null) throw new Error("closed dialog must render nothing");
-const element = component({
+const props = {
 	open: true,
 	busy: false,
 	onPicked() {},
@@ -143,6 +145,57 @@ const element = component({
 	onError() {},
 	pick: injected.pick,
 	ensure: injected.ensure
-});
+};
+if (component({ ...props, open: false }) !== null) throw new Error("closed dialog must render nothing");
+const element = component(props);
 if (element === null || element === void 0) throw new Error("open dialog rendered nothing");
+
+/** Walk the stub element tree. */
+function walk(node, visit) {
+	if (node === null || node === void 0) return;
+	if (Array.isArray(node)) {
+		for (const child of node) walk(child, visit);
+		return;
+	}
+	if (typeof node !== "object") return;
+	visit(node);
+	walk(node.portal, visit);
+	walk(node.children, visit);
+}
+
+/** Find the base-directory text input. */
+function baseInput(tree) {
+	let found;
+	walk(tree, (node) => {
+		if (found === void 0 && node.type === "input" && node.props?.type === "text") found = node;
+	});
+	if (found === void 0) throw new Error("no base-directory input rendered");
+	return found;
+}
+
+/** Find a button by its title attribute. */
+function buttonByTitle(tree, title) {
+	let found;
+	walk(tree, (node) => {
+		if (found === void 0 && node.type === "button" && node.props?.title === title) found = node;
+	});
+	if (found === void 0) throw new Error(`no button titled ${title}`);
+	return found;
+}
+
+// Base directory precedence: remembered choice > plugin row config > default.
+const CONFIGURED = "E:\\插件配置的工作区";
+globalThis.__DSH_DATE_WORKSPACE__ = { baseDir: CONFIGURED };
+globalThis.localStorage.value = void 0;
+if (baseInput(component(props)).props.value !== CONFIGURED) throw new Error("plugin config did not prefill the base directory");
+
+globalThis.localStorage.value = "F:\\临时覆盖";
+const remembered = baseInput(component(props));
+if (remembered.props.value !== "F:\\临时覆盖") throw new Error("remembered base did not win over the plugin config");
+
+// The "default" button clears the remembered override and restores the config.
+buttonByTitle(component(props), CONFIGURED).props.onClick();
+if (globalThis.localStorage.value !== void 0) throw new Error("reset did not clear the remembered base");
+if (baseInput(component(props)).props.value !== CONFIGURED) throw new Error("reset did not restore the configured base");
+
 console.log("smoke ok", fileURLToPath(new URL("../lib/client.js", import.meta.url)));
