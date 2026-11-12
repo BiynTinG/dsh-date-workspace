@@ -70,15 +70,18 @@ const moduleExports = registration.factory((name) => {
 if (moduleExports.inject.join(",") !== "slots,uiWorkspace") throw new Error("unexpected inject list");
 
 const calls = [];
-let existing = new Set();
+let failing = false;
+/** Stub for the plugin's own ensure route. */
+globalThis.fetch = async (url, init) => {
+	if (url !== "api/dsh-date-workspace/ensure") throw new Error(`unexpected fetch ${url}`);
+	const body = JSON.parse(init.body);
+	calls.push(body.path);
+	if (failing) return { ok: false, status: 400, json: async () => ({ ok: false, error: "access denied" }) };
+	return { ok: true, status: 200, json: async () => ({ ok: true, path: body.path }) };
+};
 const directory = {
 	async pickDirectory() {
 		return null;
-	},
-	async createDirectory(path, name) {
-		const target = `${path}${path.endsWith("\\") || path.endsWith("/") ? "" : "\\"}${name}`;
-		calls.push(target);
-		if (existing.has(target)) throw { rpcError: { code: "directory-exists", message: `${target} already exists` } };
 	}
 };
 
@@ -148,35 +151,38 @@ if (globalThis.__DSH_DATE_WORKSPACE__?.baseDir !== "E:\\注入的工作区") {
 	throw new Error("settings mirror did not publish the base directory");
 }
 
+// ensure() posts the whole path to this plugin's own host route: the composed
+// picker may be the `native` backend, which has no createDirectory at all.
 await injected.ensure("D:\\工作空间\\dsh-work\\2026-11-12");
-console.log("created segments:", calls.join(" | "));
-if (calls.length !== 3) throw new Error(`expected 3 segments, got ${calls.length}`);
-if (calls.at(-1) !== "D:\\工作空间\\dsh-work\\2026-11-12") throw new Error("wrong final segment");
+if (calls.length !== 1) throw new Error(`expected one ensure call, got ${calls.length}`);
+if (calls[0] !== "D:\\工作空间\\dsh-work\\2026-11-12") throw new Error(`wrong path sent: ${calls[0]}`);
 
-// Every level already exists: all three create calls answer EEXIST and the walk
-// must still complete without surfacing an error.
+// An idempotent second call succeeds the same way (the host mkdir tolerates EEXIST).
 calls.length = 0;
-existing = new Set([
-	"D:\\工作空间",
-	"D:\\工作空间\\dsh-work",
-	"D:\\工作空间\\dsh-work\\2026-11-12"
-]);
-await injected.ensure("D:\\工作空间\\dsh-work\\2026-11-12").then(() => {}, (error) => {
-	throw new Error(`existing directories rejected: ${error?.rpcError?.code ?? error}`);
-});
-if (calls.length !== 3) throw new Error("expected the EEXIST walk to still visit every segment");
+await injected.ensure("D:\\工作空间\\dsh-work\\2026-11-12");
+if (calls.length !== 1) throw new Error("second ensure must still post once");
 
-// A real failure surfaces unchanged.
-directory.createDirectory = async () => {
-	throw { rpcError: { code: "directory-create-failed", message: "access denied" } };
-};
+// A route failure surfaces its message.
+failing = true;
 let surfaced;
 try {
 	await injected.ensure("D:\\工作空间\\blocked");
 } catch (error) {
 	surfaced = error;
 }
-if (surfaced?.rpcError?.code !== "directory-create-failed") throw new Error("unexpected failure was swallowed");
+failing = false;
+if (!String(surfaced?.message).includes("access denied")) throw new Error(`unexpected failure was swallowed: ${surfaced}`);
+
+// A non-absolute path never reaches the wire.
+calls.length = 0;
+let rejected;
+try {
+	await injected.ensure("relative\\path");
+} catch (error) {
+	rejected = error;
+}
+if (calls.length !== 0) throw new Error("a relative path must not be posted");
+if (rejected === void 0) throw new Error("a relative path must be rejected");
 
 // The dialog component renders an element while open and nothing while closed.
 const component = registrations[0].component;

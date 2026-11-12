@@ -1,6 +1,6 @@
 {
   "name": "dsh-date-workspace",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "在“新建工作区”时多一个选择：按日期在可配置的基目录（默认 D:\\工作空间\\dsh-work）下创建并打开工作区（YYYY-MM-DD）。",
   "type": "module",
   "main": "lib/index.js",
@@ -59,3 +59,4 @@
   "author": "liujun <2879845107@qq.com>",
   "license": "MIT"
 }
+
